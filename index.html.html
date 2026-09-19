@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#ea580c"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="Présences"/>
+  <title>Feuille de Présence</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:linear-gradient(135deg,#fef3e2,#fff8f0);min-height:100vh;padding-bottom:80px}
+    .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #fcd9b0;display:flex;z-index:100}
+    .nav-btn{flex:1;padding:12px 0 10px;border:none;background:none;cursor:pointer;font-size:10px;font-weight:700;color:#b45309;display:flex;flex-direction:column;align-items:center;gap:3px}
+    .nav-btn.active{color:#ea580c;border-top:3px solid #ea580c;margin-top:-2px}
+    .nav-btn span{font-size:20px}
+    .page{display:none;padding:16px;max-width:600px;margin:0 auto}
+    .page.active{display:block}
+    .header{text-align:center;margin-bottom:18px;padding-top:8px}
+    .header-icon{font-size:36px}
+    .header h1{font-size:20px;font-weight:800;color:#7c2d12;margin:5px 0 3px}
+    .header p{color:#b45309;font-size:13px;font-weight:600}
+    .card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 4px 20px rgba(124,45,18,.09);margin-bottom:14px}
+    .section-title{font-size:15px;font-weight:700;color:#7c2d12;margin-bottom:14px}
+    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    label{font-size:13px;font-weight:600;color:#78350f}
+    input,select,textarea{padding:10px 13px;border-radius:10px;border:1.5px solid #fcd9b0;font-size:14px;color:#431407;background:#fffbf5;width:100%;outline:none;font-family:inherit}
+    textarea{resize:vertical;min-height:65px}
+    .toggle{display:flex;gap:8px}
+    .toggle-btn{flex:1;padding:10px 0;border-radius:10px;border:1.5px solid #fcd9b0;background:#fffbf5;cursor:pointer;font-size:14px;font-weight:600;color:#78350f}
+    .toggle-btn.yes{background:#e6f9ef;border-color:#22c55e;color:#16a34a}
+    .toggle-btn.no{background:#fff1f1;border-color:#ef4444;color:#dc2626}
+    .creneau-list{display:flex;flex-direction:column;gap:8px}
+    .creneau-btn{padding:11px 14px;border-radius:12px;border:1.5px solid #fcd9b0;background:#fffbf5;cursor:pointer;font-size:14px;font-weight:600;color:#78350f;text-align:left}
+    .creneau-btn.active{background:#fff3e0;border-color:#ea580c;color:#7c2d12}
+    .badge-lieu-tag{font-size:11px;font-weight:700;background:#ede9fe;color:#7c3aed;border-radius:8px;padding:2px 8px;margin-left:6px}
+    .info-box{display:flex;flex-wrap:wrap;gap:10px;background:#fff8f0;border:1.5px solid #fcd9b0;border-radius:12px;padding:11px 14px;font-size:13px;color:#7c2d12;margin-bottom:13px}
+    .divider{display:flex;align-items:center;gap:10px;margin:16px 0 13px}
+    .divider-line{flex:1;height:1px;background:#fcd9b0}
+    .divider-label{font-size:12px;font-weight:700;color:#b45309;background:#fff8f0;padding:3px 12px;border-radius:20px;border:1px solid #fcd9b0;white-space:nowrap}
+    .submit-btn{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#ea580c,#7c2d12);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
+    .submit-btn:disabled{background:#fcd9b0;cursor:not-allowed}
+    .btn-secondary{width:100%;padding:11px;border-radius:12px;border:1.5px solid #fcd9b0;background:#fffbf5;color:#78350f;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px}
+    .success-msg{margin-top:11px;text-align:center;color:#16a34a;font-weight:700;font-size:14px;background:#e6f9ef;border-radius:10px;padding:10px;display:none}
+    .success-msg.show{display:block}
+    .records-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+    .export-btn{padding:9px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+    .record-card{background:#fffbf5;border:1.5px solid #fcd9b0;border-radius:12px;padding:13px;margin-bottom:10px}
+    .record-top{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+    .record-name{font-weight:700;color:#7c2d12;font-size:15px}
+    .record-date{font-size:12px;color:#b45309}
+    .record-info{display:flex;flex-wrap:wrap;gap:6px}
+    .badge{border-radius:20px;padding:3px 10px;font-weight:700;font-size:11px}
+    .badge-yes{background:#e6f9ef;color:#16a34a}
+    .badge-no{background:#fff1f1;color:#dc2626}
+    .badge-lieu2{background:#ede9fe;color:#7c3aed}
+    .badge-time{background:#fef9c3;color:#92400e}
+    .record-comment{font-size:12px;color:#78350f;margin-top:6px;font-style:italic}
+    .search-input{padding:9px 13px;border-radius:10px;border:1.5px solid #fcd9b0;font-size:14px;color:#431407;background:#fffbf5;width:100%;outline:none;margin-bottom:12px}
+    .gestion-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .gtab{flex:1;padding:9px 6px;border-radius:10px;border:1.5px solid #fcd9b0;background:#fffbf5;cursor:pointer;font-size:11px;font-weight:700;color:#78350f;text-align:center;min-width:60px}
+    .gtab.active{background:#fff3e0;border-color:#ea580c;color:#7c2d12}
+    .gestion-panel{display:none}
+    .gestion-panel.active{display:block}
+    .item-list{display:flex;flex-direction:column;gap:10px}
+    .item-row{background:#fffbf5;border:1.5px solid #fcd9b0;border-radius:12px;padding:13px}
+    .item-row-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px}
+    .item-name{font-weight:700;color:#7c2d12;font-size:14px}
+    .item-sub{font-size:12px;color:#b45309;margin-top:2px}
+    .item-actions{display:flex;gap:6px;flex-shrink:0}
+    .edit-btn{padding:6px 12px;border-radius:8px;border:none;background:#fff3e0;color:#ea580c;font-weight:700;font-size:12px;cursor:pointer}
+    .del-btn{padding:6px 12px;border-radius:8px;border:none;background:#fff1f1;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer}
+    .empty-msg{text-align:center;color:#b45309;font-size:13px;padding:20px}
+    /* Profils élèves */
+    .eleve-card{background:#fff;border:1.5px solid #fcd9b0;border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 2px 10px rgba(124,45,18,.06)}
+    .eleve-card-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .eleve-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#ea580c,#7c2d12);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .eleve-card-name{font-size:17px;font-weight:800;color:#7c2d12}
+    .eleve-card-niveau{font-size:12px;font-weight:600;color:#b45309;background:#fef3e2;border-radius:20px;padding:2px 10px;display:inline-block;margin-top:3px}
+    .eleve-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .eleve-info-item{background:#fffbf5;border-radius:10px;padding:10px;border:1px solid #fcd9b0}
+    .eleve-info-label{font-size:10px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .eleve-info-value{font-size:13px;font-weight:600;color:#431407}
+    .creneau-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .creneau-tag{background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+    .modal-overlay.hidden{display:none}
+    .modal{background:#fff;border-radius:20px 20px 0 0;padding:20px 18px 30px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto}
+    .modal-title{font-size:16px;font-weight:800;color:#7c2d12;margin-bottom:16px}
+    .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .modal-grid .field{margin-bottom:0}
+    .full-width{grid-column:1/-1}
+    .tag-list{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+    .tag-item{display:flex;align-items:center;justify-content:space-between;background:#fffbf5;border:1.5px solid #fcd9b0;border-radius:10px;padding:8px 12px}
+    .tag-item-label{font-weight:700;font-size:13px}
+    .tag-del{padding:4px 10px;border-radius:8px;border:none;background:#fff1f1;color:#dc2626;font-weight:700;font-size:12px;cursor:pointer}
+    .tag-empty{font-size:12px;color:#b45309;padding:4px}
+    .creneau-line{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;align-items:center;margin-bottom:8px}
+    .creneau-line input,.creneau-line select{padding:8px 10px;font-size:12px}
+    .creneau-del{padding:8px 8px;border-radius:8px;border:none;background:#fff1f1;color:#dc2626;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap}
+    .add-creneau-btn{padding:9px;border-radius:10px;border:1.5px dashed #fcd9b0;background:#fffbf5;color:#b45309;font-weight:700;font-size:13px;cursor:pointer;width:100%;margin-bottom:12px}
+    .add-row{display:flex;gap:8px;margin-bottom:12px}
+    .add-row input{flex:1}
+    .add-btn{padding:10px 14px;border-radius:10px;border:none;background:linear-gradient(135deg,#ea580c,#7c2d12);color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+    .hidden{display:none!important}
+    #csvFallback{width:100%;height:100px;font-size:11px;margin-top:8px;border-radius:10px;border:1.5px solid #fcd9b0;padding:8px}
+    .install-banner{background:linear-gradient(135deg,#ea580c,#7c2d12);color:#fff;border-radius:14px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px}
+    .install-banner p{font-size:13px;font-weight:600}
+    .install-banner button{padding:7px 13px;border-radius:10px;border:none;background:#fff;color:#ea580c;font-weight:700;font-size:13px;cursor:pointer}
+    .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid #fcd9b0;background:#fffbf5;transition:all .15s}
+    .pin-dot.filled{background:#ea580c;border-color:#ea580c}
+    .pin-btn{padding:16px;border-radius:12px;border:1.5px solid #fcd9b0;background:#fffbf5;font-size:20px;font-weight:700;color:#7c2d12;cursor:pointer}
+    .pin-btn:active{background:#fff3e0;border-color:#ea580c}
+  </style>
+</head>
+<body>
+
+<!-- PAGE SAISIE -->
+<div class="page active" id="page-saisie">
+  <div class="header">
+    <div class="header-icon">🎨</div>
+    <h1>Feuille de Présence</h1>
+    <p>Animateur / Éducateur</p>
+  </div>
+  <div class="install-banner hidden" id="installBanner">
+    <p>📱 Installez l'app sur votre téléphone !</p>
+    <button id="installBtn">Installer</button>
+  </div>
+  <div class="card">
+    <div class="section-title">➕ Nouvelle séance</div>
+    <div class="field">
+      <label>Lieu</label>
+      <select id="lieuSelect" onchange="onLieuChange(this.value)">
+        <option value="">-- Choisir un lieu --</option>
+      </select>
+    </div>
+    <div class="field hidden" id="jourField">
+      <label>Jour</label>
+      <select id="jourSelect" onchange="onJourChange(this.value)">
+        <option value="">-- Choisir un jour --</option>
+      </select>
+    </div>
+    <div class="field hidden" id="eleveField">
+      <label>Élève</label>
+      <select id="nomEleve" onchange="onEleveChange(this.value)">
+        <option value="">-- Choisir un élève --</option>
+      </select>
+    </div>
+    <div class="field hidden" id="animateurField">
+      <label>Animateur</label>
+      <select id="nomAnimateur"><option value="">-- Choisir un animateur --</option></select>
+    </div>
+    <div class="field">
+      <label>Mois</label>
+      <select id="moisSelect" onchange="onMoisChange(this.value)">
+        <option value="">-- Choisir un mois --</option>
+        <option>Janvier</option><option>Février</option><option>Mars</option>
+        <option>Avril</option><option>Mai</option><option>Juin</option>
+        <option>Juillet</option><option>Août</option><option>Septembre</option>
+        <option>Octobre</option><option>Novembre</option><option>Décembre</option>
+      </select>
+    </div>
+    <div class="field hidden" id="semaineField">
+      <label>Semaine</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <select id="semaineMois"><option value="">-- S. du mois --</option></select>
+        <select id="semaineAnnee"><option value="">-- S. de l'année --</option></select>
+      </div>
+    </div>
+    <div class="field hidden" id="creneauField">
+      <label>Créneau</label>
+      <div class="creneau-list" id="creneauList"></div>
+    </div>
+    <div class="info-box hidden" id="infoBox">
+      <span id="infoLieu"></span><span id="infoJour"></span><span id="infoHoraire"></span><span id="infoSemaine"></span>
+    </div>
+    <div class="field">
+      <label>Élève présent(e) ?</label>
+      <div class="toggle">
+        <button class="toggle-btn" id="eOui" onclick="setToggle(true)">✅ Oui</button>
+        <button class="toggle-btn" id="eNon" onclick="setToggle(false)">❌ Non</button>
+      </div>
+    </div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-label">📝 Détails</span><div class="divider-line"></div></div>
+    <div class="field hidden" id="motifField">
+      <label>Motif d'absence</label>
+      <select id="motifAbsence">
+        <option value="">-- Sélectionner --</option>
+        <option>Maladie</option><option>Absence injustifiée</option>
+        <option>Congés / vacances</option><option>Problème transport</option><option>Autre</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Commentaire / Note</label>
+      <textarea id="commentaire" placeholder="Observations, remarques..."></textarea>
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled>Enregistrer la séance</button>
+    <div class="success-msg" id="successMsg">✅ Séance enregistrée avec succès !</div>
+  </div>
+  <div class="card hidden" id="histCard">
+    <div class="records-header">
+      <div class="section-title" style="margin:0" id="histTitle">📁 Historique</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="export-btn" onclick="openExportModal()">📥 Exporter</button>
+        <button class="export-btn" style="background:linear-gradient(135deg,#dc2626,#991b1b)" onclick="confirmerReinit()">🗑️ Réinit.</button>
+      </div>
+    </div>
+    <input class="search-input" placeholder="🔍 Rechercher..." oninput="renderHistory(this.value)"/>
+    <textarea id="csvFallback" class="hidden" readonly></textarea>
+    <div id="histList"></div>
+  </div>
+</div>
+
+<!-- PAGE ÉLÈVES -->
+<div class="page" id="page-eleves">
+  <div class="header">
+    <div class="header-icon">🧒</div>
+    <h1>Profils Élèves</h1>
+    <p>Fiches individuelles</p>
+  </div>
+  <div id="eleveProfilList"></div>
+</div>
+
+<!-- PAGE GESTION -->
+<div class="page" id="page-gestion">
+  <div class="header">
+    <div class="header-icon">⚙️</div>
+    <h1>Gestion</h1>
+    <p>Animateurs · Élèves · Lieux · Niveaux</p>
+  </div>
+  <button class="btn-secondary" style="margin-bottom:8px" onclick="rechargerDepuisDrive()">🔄 Recharger depuis Drive</button>
+  <button class="btn-secondary" style="margin-bottom:14px;background:#fff3e0;border-color:#ea580c;color:#7c2d12" onclick="importerDepuisUFCS()">📥 Importer depuis le tableau UFCS</button>
+  <div class="card">
+    <div class="gestion-tabs">
+      <button class="gtab active" onclick="switchGTab('animateurs',this)">👤 Anim.</button>
+      <button class="gtab" onclick="switchGTab('eleves',this)">🧒 Élèves</button>
+      <button class="gtab" onclick="switchGTab('lieux',this)">📍 Lieux</button>
+      <button class="gtab" onclick="switchGTab('niveaux',this)">🎓 Niveaux</button>
+    </div>
+    <div class="gestion-panel active" id="panel-animateurs">
+      <button class="submit-btn" style="margin-bottom:14px" onclick="openAnimateurModal(null)">＋ Nouvel animateur</button>
+      <div class="item-list" id="animateurList"></div>
+    </div>
+    <div class="gestion-panel" id="panel-eleves">
+      <button class="submit-btn" style="margin-bottom:14px" onclick="openEleveModal(null)">＋ Nouvel élève</button>
+      <div class="item-list" id="eleveList"></div>
+    </div>
+    <div class="gestion-panel" id="panel-lieux">
+      <button class="submit-btn" style="margin-bottom:14px" onclick="openLieuModal(null)">＋ Nouveau lieu</button>
+      <div class="item-list" id="lieuxList"></div>
+    </div>
+    <div class="gestion-panel" id="panel-niveaux">
+      <div class="add-row">
+        <input type="text" id="newNiveau" placeholder="Ex : CM2, 6ème, Terminale…"/>
+        <button class="add-btn" onclick="addNiveau()">＋ Ajouter</button>
+      </div>
+      <div class="item-list" id="niveauList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EXPORT -->
+<div class="modal-overlay hidden" id="modalExport">
+  <div class="modal">
+    <div class="modal-title">📥 Exporter l'historique</div>
+    <div class="field">
+      <label>Format</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+        <button id="fmtXLS" class="toggle-btn yes" onclick="setFmt('xls')">📊 Excel (.xlsx)</button>
+        <button id="fmtCSV" class="toggle-btn" onclick="setFmt('csv')">📄 CSV</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Période</label>
+      <select id="exportPeriode" onchange="updateExportInfo(this.value)">
+        <option value="trimestre">Trimestre en cours (défaut)</option>
+        <option value="semaine">Semaine en cours</option>
+        <option value="mois">Mois en cours</option>
+        <option value="annee">Année en cours</option>
+        <option value="tout">Toutes les données</option>
+        <option value="custom">Période personnalisée</option>
+      </select>
+    </div>
+    <div id="customPeriode" class="hidden">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="field" style="margin:0"><label>Du</label><input type="date" id="exportDu" onchange="updateExportInfo(document.getElementById('exportPeriode').value)"/></div>
+        <div class="field" style="margin:0"><label>Au</label><input type="date" id="exportAu" onchange="updateExportInfo(document.getElementById('exportPeriode').value)"/></div>
+      </div>
+    </div>
+    <div id="exportInfo" style="background:#fff8f0;border:1.5px solid #fcd9b0;border-radius:12px;padding:12px;font-size:13px;color:#7c2d12;margin-bottom:16px"></div>
+    <button class="submit-btn" style="margin-bottom:8px" onclick="exportFichier()">📥 Télécharger</button>
+    <button class="submit-btn" style="background:linear-gradient(135deg,#2563eb,#1e40af);margin-bottom:8px" onclick="partagerFichier()">📤 Partager</button>
+    <button class="submit-btn" id="driveBtn" style="background:linear-gradient(135deg,#16a34a,#0f766e);margin-bottom:8px" onclick="enregistrerDansDrive()">☁️ Enregistrer dans Google Drive</button>
+    <div id="driveStatus" style="display:none;text-align:center;font-size:12px;font-weight:600;padding:8px;border-radius:10px;margin-bottom:8px"></div>
+    <button class="btn-secondary" onclick="closeModal('modalExport')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL REINIT -->
+<div class="modal-overlay hidden" id="modalReinit">
+  <div class="modal">
+    <div class="modal-title">⚠️ Réinitialiser l'historique</div>
+    <p style="font-size:14px;color:#78350f;margin-bottom:16px">Cette action supprimera <strong>toutes les séances enregistrées</strong>.</p>
+    <div style="background:#fff1f1;border:1.5px solid #fca5a5;border-radius:12px;padding:12px;margin-bottom:16px;font-size:13px;color:#dc2626;font-weight:600">⚠️ Cette action est irréversible.</div>
+    <button class="submit-btn" style="background:linear-gradient(135deg,#16a34a,#15803d);margin-bottom:8px" onclick="exportEtReinit()">📥 Sauvegarder puis réinitialiser</button>
+    <button class="submit-btn" style="background:linear-gradient(135deg,#dc2626,#991b1b);margin-bottom:8px" onclick="reinitSansExport()">🗑️ Réinitialiser sans sauvegarder</button>
+    <button class="btn-secondary" onclick="closeModal('modalReinit')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL ANIMATEUR -->
+<div class="modal-overlay hidden" id="modalAnimateur">
+  <div class="modal">
+    <div class="modal-title" id="modalAnimateurTitle">👤 Animateur</div>
+    <div class="modal-grid">
+      <div class="field"><label>Prénom</label><input id="aPrenom" placeholder="Ex : Bernard"/></div>
+      <div class="field"><label>Nom</label><input id="aNom" placeholder="Ex : Dupont"/></div>
+      <div class="field"><label>Téléphone</label><input type="tel" id="aTelephone" placeholder="06 12 34 56 78"/></div>
+      <div class="field"><label>Email</label><input type="email" id="aEmail" placeholder="animateur@mail.com"/></div>
+      <div class="field full-width">
+        <label>Statut</label>
+        <div class="toggle">
+          <button class="toggle-btn" id="aStatutTitulaire" onclick="setStatutAnimateur('Titulaire')">⭐ Titulaire</button>
+          <button class="toggle-btn" id="aStatutRemplacant" onclick="setStatutAnimateur('Remplaçant')">🔄 Remplaçant</button>
+        </div>
+      </div>
+      <div class="field full-width">
+        <label>Lieux associés</label>
+        <div class="tag-list" id="aLieuList"></div>
+        <select id="aLieuAdd" onchange="addTag('aLieuList','aLieuAdd','_aLieuxSel','📍','#7c3aed');refreshElevesAuto()">
+          <option value="">＋ Associer un lieu</option>
+        </select>
+      </div>
+      <div class="field full-width" id="aEleveAutoWrap">
+        <label>Élèves associés (automatique, selon le lieu habituel)</label>
+        <div class="tag-list" id="aEleveAutoList"></div>
+      </div>
+      <div class="field full-width hidden" id="aEleveManualWrap">
+        <label>Élèves associés (remplaçant : pas d'automatisation, choix manuel)</label>
+        <div class="tag-list" id="aEleveList"></div>
+        <select id="aEleveAdd" onchange="addTag('aEleveList','aEleveAdd','_aElevesSel','🧒','#7c2d12')">
+          <option value="">＋ Associer un élève</option>
+        </select>
+      </div>
+    </div>
+    <input type="hidden" id="aEditKey"/>
+    <button class="submit-btn" onclick="saveAnimateur()">Enregistrer</button>
+    <button class="btn-secondary" onclick="closeModal('modalAnimateur')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL ÉLÈVE -->
+<div class="modal-overlay hidden" id="modalEleve">
+  <div class="modal">
+    <div class="modal-title" id="modalEleveTitle">🧒 Élève</div>
+    <div class="modal-grid">
+      <div class="field"><label>Prénom</label><input id="ePrenom" placeholder="Ex : Pierre"/></div>
+      <div class="field"><label>Nom</label><input id="eNom" placeholder="Ex : Martin"/></div>
+      <div class="field full-width">
+        <label>Sexe</label>
+        <div class="toggle">
+          <button class="toggle-btn" id="eSexeF" onclick="setSexeEleve('F')">F</button>
+          <button class="toggle-btn" id="eSexeM" onclick="setSexeEleve('M')">M</button>
+        </div>
+      </div>
+      <div class="field"><label>Nom du père</label><input id="eNomPere" placeholder="Ex : Jean Martin"/></div>
+      <div class="field"><label>Nom de la mère</label><input id="eNomMere" placeholder="Ex : Sophie Martin"/></div>
+      <div class="field"><label>Téléphone</label><input type="tel" id="eTelephone" placeholder="06 12 34 56 78"/></div>
+      <div class="field"><label>Email</label><input type="email" id="eEmail" placeholder="parent@mail.com"/></div>
+      <div class="field full-width"><label>Niveau scolaire</label>
+        <select id="eNiveau"><option value="">-- Niveau --</option></select>
+      </div>
+      <div class="field full-width"><label>Lieu habituel</label>
+        <select id="eLieu"><option value="">-- Lieu --</option></select>
+      </div>
+      <div class="field full-width">
+        <label>Adhérent CCOSY</label>
+        <div class="toggle">
+          <button class="toggle-btn" id="eAdherentOui" onclick="setAdherent('Oui')">✅ Oui</button>
+          <button class="toggle-btn" id="eAdherentNon" onclick="setAdherent('Non')">❌ Non</button>
+        </div>
+      </div>
+      <div class="field full-width hidden" id="eCotisationField">
+        <label>Cotisation payée</label>
+        <div class="toggle">
+          <button class="toggle-btn" id="eCotisationOui" onclick="setCotisation('Oui')">✅ Oui</button>
+          <button class="toggle-btn" id="eCotisationNon" onclick="setCotisation('Non')">❌ Non</button>
+        </div>
+      </div>
+    </div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-label">📅 Créneaux</span><div class="divider-line"></div></div>
+    <div id="creneauEditList"></div>
+    <button class="add-creneau-btn" onclick="addCreneauEditLine()">＋ Ajouter un créneau</button>
+    <input type="hidden" id="eEditKey"/>
+    <button class="submit-btn" onclick="saveEleve()">Enregistrer</button>
+    <button class="btn-secondary" onclick="closeModal('modalEleve')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL LIEU -->
+<div class="modal-overlay hidden" id="modalLieu">
+  <div class="modal">
+    <div class="modal-title" id="modalLieuTitle">📍 Lieu</div>
+    <div class="field"><label>Nom du lieu</label><input id="lNom" placeholder="Ex : VASARELY"/></div>
+    <div class="field"><label>Adresse (optionnel)</label><input id="lAdresse" placeholder="Ex : 12 rue des Arts"/></div>
+    <div class="divider"><div class="divider-line"></div><span class="divider-label">🕐 Créneaux horaires</span><div class="divider-line"></div></div>
+    <div id="lieuCreneauList"></div>
+    <button class="add-creneau-btn" onclick="addLieuCreneauLine()">＋ Ajouter un créneau</button>
+    <input type="hidden" id="lEditKey"/>
+    <button class="submit-btn" onclick="saveLieu()">Enregistrer</button>
+    <button class="btn-secondary" onclick="closeModal('modalLieu')">Annuler</button>
+  </div>
+</div>
+
+<!-- MODAL PIN GESTION -->
+<div class="modal-overlay hidden" id="modalPin">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:40px;margin-bottom:8px">🔐</div>
+    <div class="modal-title" style="text-align:center">Accès Gestion</div>
+    <p style="font-size:13px;color:#78350f;margin-bottom:18px">Entrez le code PIN pour accéder à la Gestion</p>
+    <div id="pinDisplay" style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
+      <div class="pin-dot" id="dot0"></div><div class="pin-dot" id="dot1"></div>
+      <div class="pin-dot" id="dot2"></div><div class="pin-dot" id="dot3"></div><div class="pin-dot" id="dot4"></div>
+    </div>
+    <div id="pinError" style="color:#dc2626;font-size:13px;font-weight:600;margin-bottom:12px;min-height:20px"></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto 16px">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn" onclick="pinClear()" style="background:#fff1f1;color:#dc2626">✕</button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn" onclick="pinDelete()" style="background:#fff8f0;color:#b45309">⌫</button>
+    </div>
+    <button class="btn-secondary" onclick="closeModal('modalPin')">Annuler</button>
+  </div>
+</div>
+
+<nav class="nav">
+  <button class="nav-btn active" id="nav-saisie" onclick="showPage('saisie')"><span>📋</span>Saisie</button>
+  <button class="nav-btn" id="nav-eleves" onclick="showPage('eleves')"><span>🧒</span>Profils</button>
+  <button class="nav-btn" id="nav-gestion" onclick="showPage('gestion')"><span>⚙️</span>Gestion</button>
+</nav>
+
+<script>
+window.addEventListener("error", function(e){
+  console.error("Erreur détaillée :", e.message, "—", e.filename+":"+e.lineno+":"+e.colno, e.error);
+});
+
+const JOURS=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+const MOIS_IDX=["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+// ── DATA ──────────────────────────────────────────────
+let niveaux = JSON.parse(localStorage.getItem("niveaux") || JSON.stringify(["CP","CE1","CE2","CM1","CM2","6ème","5ème","4ème","3ème","2nde","1ère","Terminale","Adulte"]));
+let lieux = JSON.parse(localStorage.getItem("lieux") || JSON.stringify([
+  {nom:"VASARELY",adresse:"",creneaux:[{jour:"Lundi",debut:"18:00",fin:"19:00"},{jour:"Mardi",debut:"17:30",fin:"18:30"}]},
+  {nom:"DOMICILE",adresse:"",creneaux:[{jour:"Samedi",debut:"10:00",fin:"11:00"}]},
+  {nom:"PAJEAUD",adresse:"",creneaux:[]},
+  {nom:"CCOSY",adresse:"",creneaux:[]},
+  {nom:"MALRAUX",adresse:"",creneaux:[]},
+  {nom:"AUTRE",adresse:"",creneaux:[]},
+]));
+let animateurs = JSON.parse(localStorage.getItem("animateurs3") || JSON.stringify([
+  {prenom:"Agnes",nom:"FOUQUET",telephone:"0669021897",email:"acg.fouquet@gmail.com",statut:"Titulaire",lieux:["PAJEAUD","CCOSY","VASARELY","DOMICILE"],eleves:[]},
+  {prenom:"Bernard",nom:"",telephone:"0664681748",email:"bernardbouin@orange.fr",statut:"Titulaire",lieux:["PAJEAUD","CCOSY"],eleves:[]},
+  {prenom:"Catherine",nom:"C",telephone:"0681076580",email:"catherine.cahuzac@gmail.com",statut:"Titulaire",lieux:["DOMICILE"],eleves:[]},
+  {prenom:"Christine",nom:"B",telephone:"0660406153",email:"gc.bessenay@gmail.com",statut:"Remplaçant",lieux:["PAJEAUD","CCOSY","VASARELY"],eleves:[]},
+  {prenom:"Christine",nom:"O",telephone:"0634964001",email:"famille.ostertag@orange.fr",statut:"Titulaire",lieux:["PAJEAUD","DOMICILE"],eleves:[]},
+  {prenom:"Corinne",nom:"COTINOT",telephone:"0629596570",email:"corinne.cotinot@gmail.com",statut:"Titulaire",lieux:["PAJEAUD","CCOSY","VASARELY","MALRAUX"],eleves:[]},
+  {prenom:"MChristine",nom:"L",telephone:"0695541292",email:"mclouishenry@wanadoo.fr",statut:"Titulaire",lieux:["PAJEAUD","CCOSY","VASARELY","DOMICILE"],eleves:[]},
+  {prenom:"Yannick",nom:"Gautier",telephone:"06 88 22 04 81",email:"spit800@gmail.com",statut:"Titulaire",lieux:["PAJEAUD","CCOSY","VASARELY","DOMICILE"],eleves:[]},
+  {prenom:"Maria",nom:"",telephone:"06 08 98 08 86",email:"mlincot@hotmail.fr",statut:"Remplaçant",lieux:[],eleves:[]},
+  {prenom:"CHRISTINE",nom:"ROGNON",telephone:"0683303047",email:"christine.rayrognon@numericable.fr",statut:"Remplaçant",lieux:[],eleves:[]},
+  {prenom:"Jean-Francois",nom:"MOUROT",telephone:"06.87.02.22.27",email:"jfmourot91@gmail.com",statut:"Remplaçant",lieux:[],eleves:[]},
+  {prenom:"Marie-Annick",nom:"BOULANGER",telephone:"0688218803",email:"ma.boulanger@gmail.com",statut:"Remplaçant",lieux:[],eleves:[]},
+  {prenom:"Catherine",nom:"QUETIN",telephone:"0688185009",email:"Cvquetin@orange.fr",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Vincent",nom:"QUETIN",telephone:"0647729141",email:"Cvquetin@orange.fr",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Francine",nom:"",telephone:"068142414",email:"",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Gilles",nom:"H",telephone:"0612218277",email:"ghubert2@free.fr",statut:"Titulaire",lieux:["PAJEAUD"],eleves:[]},
+  {prenom:"Aurélie",nom:"CAMUS",telephone:"0641863474",email:"a.camus108@laposte.net",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Nadia",nom:"SMATI",telephone:"0750516191",email:"nadia.smati@hotmail.fr",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Nathalie",nom:"WIRT",telephone:"0681992506",email:"nathalie.wirt@gmail.fr",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Yasmina",nom:"Zioun",telephone:"0770438271",email:"zioun2@msn.com",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Sonia",nom:"SMATI",telephone:"0752623043",email:"sonia.smati@laposte.net",statut:"Titulaire",lieux:[],eleves:[]},
+  {prenom:"Mme",nom:"CASSAM-CHENAI",telephone:"",email:"bapif.zahid.cassam-chenai@banquealimentaire.org",statut:"",lieux:[],eleves:[]},
+]));
+let enfants = JSON.parse(localStorage.getItem("enfants3") || JSON.stringify([
+  {prenom:"Nolwenn",nom:"AYO",sexe:"F",nomPere:"",nomMere:"AYO",telephone:"",email:"rusianea@yahoo.com",lieu:"DOMICILE",niveau:"Terminale",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Lundi",lieu:"DOMICILE",debut:"18:00",fin:"19:00",semaine:""}]},
+  {prenom:"Mathys",nom:"AYO",sexe:"M",nomPere:"",nomMere:"AYO",telephone:"",email:"rusianea@yahoo.com",lieu:"DOMICILE",niveau:"3ème",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mardi",lieu:"DOMICILE",debut:"18:00",fin:"19:00",semaine:""}]},
+  {prenom:"Luca",nom:"AYO",sexe:"M",nomPere:"",nomMere:"AYO",telephone:"",email:"rusianea@yahoo.com",lieu:"VASARELY",niveau:"5ème",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mardi",lieu:"VASARELY",debut:"18:00",fin:"19:00",semaine:""}]},
+  {prenom:"Anae",nom:"AYO",sexe:"F",nomPere:"",nomMere:"AYO",telephone:"",email:"rusianea@yahoo.com",lieu:"VASARELY",niveau:"CM1",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mardi",lieu:"VASARELY",debut:"18:00",fin:"19:00",semaine:""}]},
+  {prenom:"Abdoul-Aziz",nom:"DIALLO",sexe:"M",nomPere:"",nomMere:"Oumou-Kesso DIALLO",telephone:"07.49.19.90.81",email:"nenkessodiallo@gmail.com",lieu:"PAJEAUD",niveau:"2nde",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Samedi",lieu:"PAJEAUD",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Aisha",nom:"DIALLO",sexe:"F",nomPere:"",nomMere:"Oumou-Kesso DIALLO",telephone:"07.49.19.90.81",email:"nenkessodiallo@gmail.com",lieu:"PAJEAUD",niveau:"CM2",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Samedi",lieu:"PAJEAUD",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Yunah",nom:"GEORGES DIT GARIN",sexe:"F",nomPere:"",nomMere:"Rupa GEORGES DIT GARIN",telephone:"0689297676",email:"rupa@orange.fr",lieu:"MALRAUX",niveau:"2nde",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"MALRAUX",debut:"16:00",fin:"17:00",semaine:""}]},
+  {prenom:"Eythann",nom:"GEORGES DIT GARIN",sexe:"M",nomPere:"",nomMere:"Rupa GEORGES DIT GARIN",telephone:"0689297676",email:"rupa@orange.fr",lieu:"MALRAUX",niveau:"5ème",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"MALRAUX",debut:"15:00",fin:"16:00",semaine:""}]},
+  {prenom:"Camélia",nom:"BELHADJ-Ali",sexe:"F",nomPere:"",nomMere:"Hanane BELHADJ-Ali",telephone:"06.62.12.23.50",email:"hanane.elbougray@gmail.com",lieu:"CCOSY",niveau:"5ème",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"15:00",fin:"16:00",semaine:""}]},
+  {prenom:"Myriam",nom:"BELHADJ-Ali",sexe:"F",nomPere:"",nomMere:"Hanane BELHADJ-Ali",telephone:"06.62.12.23.50",email:"hanane.elbougray@gmail.com",lieu:"CCOSY",niveau:"3ème",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"15:00",fin:"16:00",semaine:""}]},
+  {prenom:"Yannis",nom:"RAFAOUI",sexe:"M",nomPere:"",nomMere:"Lynda RAFAOUI",telephone:"06 59 20 45 68",email:"lyndayanisso@hotmail@hotmail,fr",lieu:"CCOSY",niveau:"Terminale",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:30",semaine:""}]},
+  {prenom:"Rami",nom:"RAFAOUI",sexe:"M",nomPere:"",nomMere:"Lynda RAFAOUI",telephone:"06 59 20 45 68",email:"lyndayanisso@hotmail@hotmail,fr",lieu:"CCOSY",niveau:"CE2",adherent:"Oui",cotisationPayee:"Non",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Sami",nom:"RAFAOUI",sexe:"M",nomPere:"",nomMere:"Lynda RAFAOUI",telephone:"06 59 20 45 68",email:"lyndayanisso@hotmail@hotmail,fr",lieu:"CCOSY",niveau:"CE2",adherent:"",cotisationPayee:"Non",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Wassim",nom:"RAFAOUI",sexe:"M",nomPere:"",nomMere:"Lynda RAFAOUI",telephone:"06 59 20 45 68",email:"lyndayanisso@hotmail@hotmail,fr",lieu:"CCOSY",niveau:"3ème",adherent:"Oui",cotisationPayee:"Non",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Ibrahim",nom:"BOCOUM",sexe:"M",nomPere:"",nomMere:"Goury BOCOUM",telephone:"768794180",email:"Goury.bocoum@yahoo.fr",lieu:"PAJEAUD",niveau:"6ème",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mercredi",lieu:"PAJEAUD",debut:"15:00",fin:"16:00",semaine:""}]},
+  {prenom:"Tidiane",nom:"BOCOUM",sexe:"M",nomPere:"",nomMere:"Goury BOCOUM",telephone:"768794180",email:"Goury.bocoum@yahoo.fr",lieu:"PAJEAUD",niveau:"CE2",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mercredi",lieu:"PAJEAUD",debut:"16:00",fin:"17:00",semaine:""}]},
+  {prenom:"Goury",nom:"BOCOUM",sexe:"M",nomPere:"",nomMere:"Goury BOCOUM",telephone:"768794180",email:"Goury.bocoum@yahoo.fr",lieu:"VASARELY",niveau:"Adulte",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mardi",lieu:"VASARELY",debut:"17:00",fin:"18:00",semaine:""}]},
+  {prenom:"Mohamed",nom:"BATOULI",sexe:"M",nomPere:"",nomMere:"Mme BATOULI",telephone:"769565898",email:"",lieu:"PAJEAUD",niveau:"CM1",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"PAJEAUD",debut:"11:00",fin:"12:00",semaine:""}]},
+  {prenom:"Ehlad",nom:"BATOULI",sexe:"M",nomPere:"",nomMere:"Mme BATOULI",telephone:"769565898",email:"",lieu:"PAJEAUD",niveau:"6ème",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"PAJEAUD",debut:"11:00",fin:"12:00",semaine:""}]},
+  {prenom:"Allaouia",nom:"BATOULI",sexe:"F",nomPere:"",nomMere:"Mme BATOULI",telephone:"769565898",email:"",lieu:"",niveau:"CP",adherent:"Non",cotisationPayee:"",creneaux:[]},
+  {prenom:"Rawen",nom:"MANSI",sexe:"F",nomPere:"",nomMere:"Manel MANSI",telephone:"06 62 23 87 78",email:"manelbouz92@hotmail.com",lieu:"CCOSY",niveau:"CM2",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"11:00",fin:"12:00",semaine:""}]},
+  {prenom:"Leyen",nom:"MANSI",sexe:"F",nomPere:"",nomMere:"Manel MANSI",telephone:"06 62 23 87 78",email:"manelbouz92@hotmail.com",lieu:"CCOSY",niveau:"CM2",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"11:00",fin:"12:00",semaine:""}]},
+  {prenom:"Loujeyn",nom:"MANSI",sexe:"F",nomPere:"",nomMere:"Manel MANSI",telephone:"06 62 23 87 78",email:"manelbouz92@hotmail.com",lieu:"CCOSY",niveau:"CM1",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Binetta",nom:"SECK",sexe:"F",nomPere:"",nomMere:"Marieme SECK",telephone:"752934071",email:"mariemegueye993@gmail.com",lieu:"PAJEAUD",niveau:"CM2",adherent:"Non",cotisationPayee:"",creneaux:[]},
+  {prenom:"Mariam",nom:"DOUMIA",sexe:"F",nomPere:"",nomMere:"DOUMIA",telephone:"",email:"adjara Dosso 18@gmail.com",lieu:"VASARELY",niveau:"CE1",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mardi",lieu:"VASARELY",debut:"19:00",fin:"20:00",semaine:""}]},
+  {prenom:"Lina",nom:"BATTI",sexe:"F",nomPere:"",nomMere:"Aicha BATTI",telephone:"",email:"marieaicha1975@gmail.com",lieu:"",niveau:"6ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Assil",nom:"CHEDLI",sexe:"F",nomPere:"",nomMere:"Afoua CHEDLI",telephone:"",email:"hafouahamdi@gmail.com",lieu:"",niveau:"CM2",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Mohamed",nom:"CHEDLI",sexe:"M",nomPere:"",nomMere:"Afoua CHEDLI",telephone:"",email:"hafouahamdi@gmail.com",lieu:"",niveau:"5ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Khaby",nom:"DEMBELE",sexe:"F",nomPere:"",nomMere:"DEMBELE",telephone:"616692218",email:"",lieu:"",niveau:"CE2",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Younes",nom:"KANNOUR",sexe:"M",nomPere:"",nomMere:"KANNOUR Sabrina",telephone:"06.51.05.69.56",email:"tounisiana92@hotmail.fr",lieu:"",niveau:"5ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Ines",nom:"KANNOUR",sexe:"F",nomPere:"",nomMere:"KANNOUR Sabrina",telephone:"06.51.05.69.56",email:"tounisiana92@hotmail.fr",lieu:"",niveau:"4ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Délia",nom:"KANNOUR",sexe:"F",nomPere:"",nomMere:"KANNOUR Sabrina",telephone:"06.51.05.69.56",email:"tounisiana92@hotmail.fr",lieu:"",niveau:"CM2",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Lylia",nom:"KANNOUR",sexe:"F",nomPere:"",nomMere:"KANNOUR Sabrina",telephone:"06.51.05.69.56",email:"tounisiana92@hotmail.fr",lieu:"",niveau:"CM1",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Ali",nom:"HALAOUI",sexe:"M",nomPere:"",nomMere:"HALAOUI Nadia",telephone:"06.51.88.36.67",email:"nkhelifa@laposte.net",lieu:"",niveau:"2nde",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Mehdi",nom:"HALAOUI",sexe:"M",nomPere:"",nomMere:"HALAOUI Nadia",telephone:"06.51.88.36.67",email:"nkhelifa@laposte.net",lieu:"",niveau:"3ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Lilia",nom:"HALAOUI",sexe:"M",nomPere:"",nomMere:"HALAOUI Nadia",telephone:"06.51.88.36.67",email:"nkhelifa@laposte.net",lieu:"",niveau:"6ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Vazoumana",nom:"MEITE",sexe:"M",nomPere:"",nomMere:"MEITE Dani",telephone:"07 83 89 16 29",email:"danivazou@gmail.com",lieu:"",niveau:"3ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Ilyas",nom:"AZNIZEM",sexe:"M",nomPere:"",nomMere:"AZNIZEM ESSAADIA",telephone:"07.64.81.72.00",email:"ki6660118@gmail.com",lieu:"",niveau:"CE1",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Akim",nom:"DIALLO",sexe:"M",nomPere:"",nomMere:"N'DIAYE Sarah DIALLO",telephone:"06 21 53 75 38",email:"",lieu:"",niveau:"CE2",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Yassine",nom:"CHAKIK",sexe:"M",nomPere:"",nomMere:"BOUAZZA Halima CHAKIK",telephone:"",email:"bouazzahalima7@gmail.com",lieu:"",niveau:"3ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Tasnime",nom:"HAMOUDI",sexe:"F",nomPere:"",nomMere:"HAMOUDI Dif",telephone:"06.43.53.33.00",email:"",lieu:"",niveau:"6ème",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Amir",nom:"HAMOUDI",sexe:"M",nomPere:"",nomMere:"HAMOUDI Dif",telephone:"06.43.53.33.00",email:"",lieu:"",niveau:"CE1",adherent:"Oui",cotisationPayee:"",creneaux:[]},
+  {prenom:"Fadil",nom:"ABDELKADER",sexe:"M",nomPere:"",nomMere:"Kahina ABDELKADER",telephone:"07 62 18 29 29",email:"kahinaahbab16@gmail.com",lieu:"CCOSY",niveau:"CE2",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Yacine",nom:"ABDELKADER",sexe:"M",nomPere:"",nomMere:"Kahina ABDELKADER",telephone:"07 62 18 29 29",email:"kahinaahbab16@gmail.com",lieu:"CCOSY",niveau:"CE1",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Samedi",lieu:"CCOSY",debut:"10:00",fin:"11:00",semaine:""}]},
+  {prenom:"Emmanuelle",nom:"ROGER",sexe:"F",nomPere:"",nomMere:"Mme ROGER",telephone:"672358464",email:"",lieu:"VASARELY",niveau:"4ème",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mardi",lieu:"VASARELY",debut:"17:00",fin:"18:00",semaine:""}]},
+  {prenom:"Adrian",nom:"ANTON",sexe:"M",nomPere:"",nomMere:"Rozalia ANTON",telephone:"660149308",email:"",lieu:"PAJEAUD",niveau:"2nde",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"PAJEAUD",debut:"17:00",fin:"18:00",semaine:""}]},
+  {prenom:"Paule_Line",nom:"NGOUO (M) / NGASSA (P)",sexe:"F",nomPere:"Raoul NGASSA",nomMere:"Mme NGOUO",telephone:"658557854 / 0605642217",email:"danyellangouo@yahoo.fr",lieu:"CCOSY",niveau:"2nde",adherent:"Non",cotisationPayee:"Non",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"15:00",fin:"16:00",semaine:""}]},
+  {prenom:"Eros-Asael",nom:"NGOUO (M) / NGASSA (P)",sexe:"M",nomPere:"Raoul NGASSA",nomMere:"Mme NGOUO",telephone:"658557854 / 0605642217",email:"danyellangouo@yahoo.fr",lieu:"CCOSY",niveau:"4ème",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"16:00",fin:"17:00",semaine:""}]},
+  {prenom:"Salihoudia",nom:"DIALLO",sexe:"F",nomPere:"",nomMere:"halimatou DIALLO",telephone:"652783958",email:"halimatoudiallo490@yahoo.fr",lieu:"CCOSY",niveau:"6ème",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"14:30",fin:"15:30",semaine:""}]},
+  {prenom:"Adam",nom:"DEMBELE",sexe:"M",nomPere:"",nomMere:"Maimounia DEMBELE",telephone:"06 03 19 42 86",email:"dembele.boubacar99@yahoo.fr",lieu:"CCOSY",niveau:"6ème",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"16:00",fin:"17:00",semaine:""}]},
+  {prenom:"Kais",nom:"DEMBELE",sexe:"M",nomPere:"",nomMere:"Maimounia DEMBELE",telephone:"06 03 19 42 86",email:"dembele.boubacar99@yahoo.fr",lieu:"CCOSY",niveau:"CM1",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"16:00",fin:"17:00",semaine:""}]},
+  {prenom:"Mickael",nom:"MERVIL",sexe:"M",nomPere:"",nomMere:"Ginette MERVIL",telephone:"664935573",email:"",lieu:"PAJEAUD",niveau:"5ème",adherent:"Non",cotisationPayee:"Oui",creneaux:[{jour:"Mercredi",lieu:"PAJEAUD",debut:"14:30",fin:"15:30",semaine:""}]},
+  {prenom:"Aichatou",nom:"DIALLO",sexe:"F",nomPere:"",nomMere:"halimatou DIALLO",telephone:"652783958",email:"halimatoudiallo490@yahoo.fr",lieu:"CCOSY",niveau:"Terminale",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"17:00",fin:"18:30",semaine:""}]},
+  {prenom:"Mathumilla",nom:"MANOHARAN",sexe:"F",nomPere:"",nomMere:"Barathi des Femmes Relais MANOHARAN",telephone:"142370573  / 06 51 71 89 90",email:"mjeyabhavani@yahoo.com",lieu:"CCOSY",niveau:"5ème",adherent:"Oui",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"14:00",fin:"15:00",semaine:""}]},
+  {prenom:"Mathumilha",nom:"MANOHARAN",sexe:"F",nomPere:"",nomMere:"Barathi des Femmes Relais MANOHARAN",telephone:"142370573  / 06 51 71 89 90",email:"mjeyabhavani@yahoo.com",lieu:"CCOSY",niveau:"5ème",adherent:"Non",cotisationPayee:"",creneaux:[{jour:"Mercredi",lieu:"CCOSY",debut:"14:00",fin:"15:00",semaine:""}]},
+]));
+let records = JSON.parse(localStorage.getItem("presences") || "[]");
+
+// ── SAUVEGARDE GOOGLE SHEETS ──────────────────────────
+const IS_NETLIFY = window.location.hostname !== "localhost" && !window.location.hostname.includes("claude");
+let syncTimeout = null;
+
+function save() {
+  // Toujours sauvegarder en local d'abord (accès hors ligne)
+  localStorage.setItem("niveaux",JSON.stringify(niveaux));
+  localStorage.setItem("lieux",JSON.stringify(lieux));
+  localStorage.setItem("animateurs3",JSON.stringify(animateurs));
+  localStorage.setItem("enfants3",JSON.stringify(enfants));
+  localStorage.setItem("presences",JSON.stringify(records));
+
+  // Synchroniser avec Google Sheets (avec délai pour éviter les appels trop fréquents)
+  if (IS_NETLIFY) {
+    clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(syncToSheets, 1500);
+  }
+}
+
+async function syncToSheets() {
+  try {
+    const toSync = [
+      { type: "presences", data: records },
+      { type: "enfants", data: enfants },
+      { type: "animateurs", data: animateurs },
+      { type: "lieux", data: lieux },
+      { type: "niveaux", data: niveaux.map(n => ({ nom: n })) },
+    ];
+    for (const item of toSync) {
+      await fetch("/.netlify/functions/saveData", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(item),
+      });
+    }
+    showSyncStatus("✅ Synchronisé avec Google Sheets");
+  } catch (e) {
+    showSyncStatus("⚠️ Sauvegarde locale uniquement");
+  }
+}
+
+async function loadFromSheets() {
+  if (!IS_NETLIFY) { showSyncStatus("⚠️ Le rechargement Drive n'est disponible que sur le site en ligne."); return; }
+  try {
+    showSyncStatus("🔄 Chargement des données...");
+    const res = await fetch("/.netlify/functions/getData");
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+
+    if (d.presences?.length) { records = d.presences.map(r => ({...r, elevePresent: r.elevePresent === "true" || r.elevePresent === true})); localStorage.setItem("presences", JSON.stringify(records)); }
+    if (d.enfants?.length) { enfants = d.enfants.map(e => ({...e, creneaux: tryParse(e.creneaux, [])})); localStorage.setItem("enfants3", JSON.stringify(enfants)); }
+    if (d.animateurs?.length) { animateurs = d.animateurs.map(a => ({...a, lieux: tryParse(a.lieux, []), eleves: tryParse(a.eleves, [])})); localStorage.setItem("animateurs3", JSON.stringify(animateurs)); }
+    if (d.lieux?.length) { lieux = d.lieux.map(l => ({...l, creneaux: tryParse(l.creneaux, [])})); localStorage.setItem("lieux", JSON.stringify(lieux)); }
+    if (d.niveaux?.length) { niveaux = d.niveaux.map(n => n.nom).filter(Boolean); localStorage.setItem("niveaux", JSON.stringify(niveaux)); }
+
+    populateSelects(); renderHistory(); renderGestion();
+    showSyncStatus("✅ Données chargées depuis Google Sheets");
+  } catch(e) {
+    showSyncStatus("📱 Mode hors ligne (données locales)");
+  }
+}
+
+function rechargerDepuisDrive() {
+  if (!confirm("Recharger depuis Drive va remplacer les données actuellement affichées (animateurs, élèves, lieux, niveaux, présences) par celles du Google Sheet. Continuer ?")) return;
+  loadFromSheets();
+}
+
+async function importerDepuisUFCS() {
+  if (!IS_NETLIFY) { showSyncStatus("⚠️ L'import UFCS n'est disponible que sur le site en ligne."); return; }
+  if (!confirm("Importer depuis le tableau UFCS va remplacer les profils Animateurs et Élèves actuels par ceux du tableau (Bénévoles + Élèves 2026/2027). Continuer ?")) return;
+  try {
+    showSyncStatus("🔄 Import du tableau UFCS en cours...");
+    const res = await fetch("/.netlify/functions/importUFCS");
+    if (!res.ok) throw new Error(await res.text());
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+
+    enfants = d.enfants;
+    animateurs = d.animateurs;
+    localStorage.setItem("enfants3", JSON.stringify(enfants));
+    localStorage.setItem("animateurs3", JSON.stringify(animateurs));
+
+    populateSelects(); renderHistory(); renderGestion();
+    let msg = `✅ Importé : ${d.countAnimateurs} animateurs, ${d.countEleves} élèves`;
+    if (d.warnings && d.warnings.length) msg += ` (${d.warnings.length} créneau(x) à vérifier manuellement)`;
+    showSyncStatus(msg);
+    if (d.warnings && d.warnings.length) {
+      console.warn("Créneaux à vérifier manuellement :\n" + d.warnings.join("\n"));
+    }
+  } catch (e) {
+    console.error("Erreur import UFCS :", e);
+    showSyncStatus("⚠️ Échec de l'import UFCS (voir console).");
+  }
+}
+
+function tryParse(val, fallback) {
+  try { return typeof val === "string" ? JSON.parse(val) : val; } catch { return fallback; }
+}
+
+function showSyncStatus(msg) {
+  let el = document.getElementById("syncStatus");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "syncStatus";
+    el.style = "text-align:center;font-size:12px;font-weight:600;padding:6px 12px;border-radius:10px;margin-bottom:10px;background:#fff8f0;color:#b45309;border:1px solid #fcd9b0";
+    document.querySelector("#page-saisie .card").before(el);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
+  if (msg.startsWith("✅")) setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+function animateurLabel(a){return[a.prenom,a.nom].filter(Boolean).join(" ");}
+function eleveLabel(e){return[e.prenom,e.nom].filter(Boolean).join(" ");}
+function lieuxNames(){return lieux.map(l=>l.nom);}
+// Élèves automatiquement associés à un animateur : ceux dont le lieu habituel
+// correspond à l'un des lieux de l'animateur (plus besoin de les choisir à la main).
+// Élèves associés à un animateur : automatique par lieu pour un titulaire,
+// mais manuel pour un remplaçant (pas d'automatisation, pour éviter de lui
+// attribuer tous les élèves d'un lieu où il ne vient que ponctuellement).
+function enfantsAssocies(a){
+  if(a.statut==="Remplaçant") return enfants.filter(e=>(a.eleves||[]).includes(eleveLabel(e)));
+  return enfants.filter(e=>(a.lieux||[]).includes(e.lieu));
+}
+function elevesAssocies(a){return enfantsAssocies(a).map(eleveLabel);}
+
+// ── ACCÈS GESTION (CODE PIN) ───────────────────────────
+const GESTION_PIN="92160";
+let gestionUnlocked=false, pinBuffer="";
+
+function showPage(name) {
+  if(name==="gestion" && !gestionUnlocked){ouvrirModalPin();return;}
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
+  document.getElementById("page-"+name).classList.add("active");
+  document.getElementById("nav-"+name).classList.add("active");
+  if(name==="gestion") renderGestion();
+  if(name==="eleves") renderProfilsEleves();
+}
+
+function ouvrirModalPin(){
+  pinBuffer="";updatePinDisplay();
+  document.getElementById("pinError").textContent="";
+  document.getElementById("modalPin").classList.remove("hidden");
+}
+function pinPress(d){
+  if(pinBuffer.length>=5)return;
+  pinBuffer+=d;updatePinDisplay();
+  if(pinBuffer.length===5)setTimeout(checkPin,150);
+}
+function pinDelete(){pinBuffer=pinBuffer.slice(0,-1);updatePinDisplay();}
+function pinClear(){pinBuffer="";updatePinDisplay();}
+function updatePinDisplay(){for(let i=0;i<5;i++)document.getElementById("dot"+i).className="pin-dot"+(i<pinBuffer.length?" filled":"");}
+function checkPin(){
+  if(pinBuffer===GESTION_PIN){
+    gestionUnlocked=true;
+    closeModal("modalPin");
+    showPage("gestion");
+  } else {
+    document.getElementById("pinError").textContent="❌ Code incorrect";
+    pinBuffer="";updatePinDisplay();
+    if(navigator.vibrate)navigator.vibrate([100,50,100]);
+  }
+}
+
+// ── SAISIE ────────────────────────────────────────────
+let formState={elevePresent:null,creneauIndex:null};
+let exportFmt="xls";
+
+function setFmt(fmt) {
+  exportFmt=fmt;
+  document.getElementById("fmtXLS").className="toggle-btn"+(fmt==="xls"?" yes":"");
+  document.getElementById("fmtCSV").className="toggle-btn"+(fmt==="csv"?" yes":"");
+}
+
+function populateSelects() {
+  document.getElementById("lieuSelect").innerHTML=
+    '<option value="">-- Choisir un lieu --</option>'+
+    lieux.map(l=>`<option value="${l.nom}">${l.nom}</option>`).join("");
+}
+
+function getWeekNumber(d){
+  const date=new Date(d);date.setHours(0,0,0,0);date.setDate(date.getDate()+4-(date.getDay()||7));
+  const y=new Date(date.getFullYear(),0,1);return Math.ceil((((date-y)/86400000)+1)/7);
+}
+
+function onMoisChange(mois) {
+  if(!mois){document.getElementById("semaineField").classList.add("hidden");return;}
+  const year=new Date().getFullYear(),mi=MOIS_IDX.indexOf(mois);
+  const firstDay=new Date(year,mi,1),lastDay=new Date(year,mi+1,0);
+  const sm=document.getElementById("semaineMois");
+  sm.innerHTML='<option value="">-- S. du mois --</option>';
+  let sn=1,d=new Date(firstDay);
+  while(d<=lastDay&&sn<=6){
+    const ws=new Date(d),we=new Date(d);we.setDate(we.getDate()+6);
+    const ec=we>lastDay?lastDay:we;
+    sm.innerHTML+=`<option value="${sn}">S${sn} (${ws.getDate()}–${ec.getDate()} ${mois})</option>`;
+    d.setDate(d.getDate()+7);sn++;
+  }
+  const sa=document.getElementById("semaineAnnee");
+  sa.innerHTML='<option value="">-- S. de l\'année --</option>';
+  d=new Date(firstDay);const seen=new Set();
+  while(d<=lastDay){const wn=getWeekNumber(d);if(!seen.has(wn)){seen.add(wn);sa.innerHTML+=`<option value="${wn}">Semaine ${wn}</option>`;}d.setDate(d.getDate()+7);}
+  document.getElementById("semaineField").classList.remove("hidden");
+}
+
+function resetSaisieFrom(fromId) {
+  const order=["jourField","eleveField","animateurField","creneauField","infoBox","motifField"];
+  const start=order.indexOf(fromId);
+  order.slice(start).forEach(id=>document.getElementById(id).classList.add("hidden"));
+  document.getElementById("eOui").className="toggle-btn";
+  document.getElementById("eNon").className="toggle-btn";
+  formState={elevePresent:null,creneauIndex:null};
+  checkSubmit();
+}
+
+function onLieuChange(lieuNom) {
+  resetSaisieFrom("jourField");
+  if(!lieuNom) return;
+  const joursDispos=new Set();
+  enfants.forEach(e=>e.creneaux.forEach(c=>{if((c.lieu||e.lieu)===lieuNom)joursDispos.add(c.jour);}));
+  if(!joursDispos.size){alert("Aucun élève n'a de créneau pour ce lieu.");return;}
+  const joursOrdres=JOURS.filter(j=>joursDispos.has(j));
+  document.getElementById("jourSelect").innerHTML='<option value="">-- Choisir un jour --</option>'+joursOrdres.map(j=>`<option value="${j}">${j}</option>`).join("");
+  document.getElementById("jourField").classList.remove("hidden");
+}
+
+function onJourChange(jour) {
+  resetSaisieFrom("eleveField");
+  const lieuNom=document.getElementById("lieuSelect").value;
+  if(!jour) return;
+  const elevesCompatibles=enfants.map((e,i)=>({e,i,creneaux:e.creneaux.filter(c=>(c.lieu||e.lieu)===lieuNom&&c.jour===jour)})).filter(x=>x.creneaux.length>0);
+  if(!elevesCompatibles.length){alert("Aucun élève disponible pour ce lieu et ce jour.");return;}
+  document.getElementById("nomEleve").innerHTML='<option value="">-- Choisir un élève --</option>'+elevesCompatibles.map(x=>{
+    const horaires=x.creneaux.map(c=>`${c.debut}-${c.fin}`).join(", ");
+    return `<option value="${x.i}">${eleveLabel(x.e)} (${horaires})</option>`;
+  }).join("");
+  document.getElementById("eleveField").classList.remove("hidden");
+}
+
+function onEleveChange(idx) {
+  resetSaisieFrom("animateurField");
+  if(idx===""){checkSubmit();return;}
+  const e=enfants[idx];
+  const lieuNom=document.getElementById("lieuSelect").value;
+  const jour=document.getElementById("jourSelect").value;
+  const creneauxFiltres=e.creneaux.filter(c=>(c.lieu||e.lieu)===lieuNom&&c.jour===jour);
+  // Animateurs associés : automatique par lieu pour les titulaires,
+  // manuel (par élève) pour les remplaçants — pas d'automatisation pour eux.
+  const animsAssocies = animateurs.map((a,i)=>({a,i})).filter(({a})=>
+    a.statut==="Remplaçant" ? (a.eleves||[]).includes(eleveLabel(e)) : (a.lieux||[]).includes(lieuNom)
+  );
+
+  if(animsAssocies.length === 0) {
+    // Aucun animateur associé → proposer d'en renseigner un
+    document.getElementById("animateurField").classList.remove("hidden");
+    document.getElementById("nomAnimateur").innerHTML =
+      '<option value="">-- Aucun animateur associé --</option>' +
+      animateurs.map((a,i)=>`<option value="${i}">${animateurLabel(a)}</option>`).join("") +
+      '<option value="__aller_gestion__">⚙️ Associer un animateur...</option>';
+    // Avertissement visible
+    let warn = document.getElementById("animWarn");
+    if(!warn){warn=document.createElement("div");warn.id="animWarn";warn.style="margin-top:6px;background:#fff3e0;border:1.5px solid #fcd9b0;border-radius:10px;padding:9px 12px;font-size:12px;color:#92400e;font-weight:600";document.getElementById("animateurField").appendChild(warn);}
+    warn.innerHTML='⚠️ Aucun animateur n\'est associé à ce lieu. <span style="cursor:pointer;text-decoration:underline;color:#ea580c" onclick="showPage(\'gestion\')">Aller dans Gestion →</span>';
+    warn.classList.remove("hidden");
+  } else {
+    // Afficher uniquement les animateurs associés
+    const autoSelect = animsAssocies.length === 1 ? animsAssocies[0].i : "";
+    document.getElementById("nomAnimateur").innerHTML =
+      '<option value="">-- Choisir un animateur --</option>' +
+      animsAssocies.map(({a,i})=>`<option value="${i}" ${animsAssocies.length===1?'selected':''}>${animateurLabel(a)}</option>`).join("");
+    const warn = document.getElementById("animWarn");
+    if(warn) warn.classList.add("hidden");
+    document.getElementById("animateurField").classList.remove("hidden");
+    if(animsAssocies.length===1) formState.animateurAutoSet=true;
+  }
+
+  // Intercepter le choix "Aller dans Gestion"
+  document.getElementById("nomAnimateur").onchange = function() {
+    if(this.value==="__aller_gestion__") { this.value=""; showPage('gestion'); }
+    checkSubmit();
+  };
+  document.getElementById("creneauList").innerHTML=creneauxFiltres.map((c,i)=>
+    `<button class="creneau-btn" id="cr${i}" onclick="selectCreneauFiltre(${i},${idx},'${lieuNom}','${jour}')">
+      📅 ${c.jour} · ${c.debut}–${c.fin}${c.semaine?" · S"+c.semaine:""}
+      <span class="badge-lieu-tag">${c.lieu||e.lieu}</span>
+    </button>`).join("");
+  document.getElementById("creneauField").classList.remove("hidden");
+  if(creneauxFiltres.length===1) selectCreneauFiltre(0,idx,lieuNom,jour);
+  checkSubmit();
+}
+
+function selectCreneauFiltre(filtreIdx,eleveIdx,lieuNom,jour) {
+  const e=enfants[eleveIdx];
+  const creneauxFiltres=e.creneaux.filter(c=>(c.lieu||e.lieu)===lieuNom&&c.jour===jour);
+  const c=creneauxFiltres[filtreIdx];
+  formState.creneauIndex=e.creneaux.indexOf(c);
+  document.querySelectorAll(".creneau-btn").forEach((b,j)=>b.classList.toggle("active",j===filtreIdx));
+  document.getElementById("infoLieu").textContent="📍 "+(c.lieu||e.lieu);
+  document.getElementById("infoJour").textContent="📅 "+c.jour;
+  document.getElementById("infoHoraire").textContent="🕐 "+c.debut+" – "+c.fin;
+  document.getElementById("infoSemaine").textContent=c.semaine?"📆 Semaine "+c.semaine:"";
+  document.getElementById("infoBox").classList.remove("hidden");
+  checkSubmit();
+}
+
+function setToggle(val) {
+  formState.elevePresent=val;
+  document.getElementById("eOui").className="toggle-btn"+(val?" yes":"");
+  document.getElementById("eNon").className="toggle-btn"+(!val?" no":"");
+  document.getElementById("motifField").classList.toggle("hidden",val!==false);
+  checkSubmit();
+}
+
+function checkSubmit() {
+  const ok=document.getElementById("nomEleve").value!==""&&document.getElementById("nomAnimateur").value!==""&&formState.creneauIndex!==null&&formState.elevePresent!==null;
+  document.getElementById("submitBtn").disabled=!ok;
+}
+
+function handleSubmit() {
+  const eIdx=document.getElementById("nomEleve").value;
+  const aIdx=document.getElementById("nomAnimateur").value;
+  const e=enfants[eIdx],a=animateurs[aIdx],c=e.creneaux[formState.creneauIndex];
+  records.unshift({
+    id:Date.now(),date:new Date().toLocaleDateString("fr-FR"),
+    animateur:animateurLabel(a),eleve:eleveLabel(e),niveau:e.niveau||"",
+    jour:c.jour,debut:c.debut,fin:c.fin,lieu:c.lieu||e.lieu,
+    mois:document.getElementById("moisSelect").value||"",
+    semaineMois:document.getElementById("semaineMois").value?"S"+document.getElementById("semaineMois").value+" du mois":"",
+    semaineAnnee:document.getElementById("semaineAnnee").value?"Semaine "+document.getElementById("semaineAnnee").value:"",
+    elevePresent:formState.elevePresent,
+    motif:document.getElementById("motifAbsence").value,
+    commentaire:document.getElementById("commentaire").value,
+  });
+  save();
+  ["nomEleve","nomAnimateur","commentaire","motifAbsence","moisSelect","lieuSelect","jourSelect"].forEach(id=>document.getElementById(id).value="");
+  ["creneauField","infoBox","motifField","semaineField","jourField","eleveField","animateurField"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+  formState={elevePresent:null,creneauIndex:null};
+  document.getElementById("eOui").className="toggle-btn";
+  document.getElementById("eNon").className="toggle-btn";
+  checkSubmit();
+  const msg=document.getElementById("successMsg");msg.classList.add("show");setTimeout(()=>msg.classList.remove("show"),2500);
+  renderHistory();
+}
+
+function renderHistory(search="") {
+  const f=records.filter(r=>r.eleve.toLowerCase().includes(search.toLowerCase())||r.animateur.toLowerCase().includes(search.toLowerCase()));
+  document.getElementById("histCard").classList.toggle("hidden",records.length===0);
+  document.getElementById("histTitle").textContent=`📁 Historique (${records.length})`;
+  document.getElementById("histList").innerHTML=f.map(r=>`
+    <div class="record-card">
+      <div class="record-top"><span class="record-name">👤 ${r.eleve}</span><span class="record-date">${r.date}</span></div>
+      <div class="record-info">
+        <span class="badge badge-lieu2">${r.lieu}</span>
+        <span class="badge badge-time">${r.jour} · ${r.debut}–${r.fin}</span>
+        ${r.mois?`<span class="badge" style="background:#e0f2fe;color:#0369a1">${r.mois}${r.semaineMois?" · "+r.semaineMois:""}${r.semaineAnnee?" · "+r.semaineAnnee:""}</span>`:""}
+        <span class="badge badge-yes">🎨 ${r.animateur}</span>
+        <span class="badge ${r.elevePresent?'badge-yes':'badge-no'}">Élève : ${r.elevePresent?"✅":"❌"}</span>
+        ${r.motif?`<span class="badge" style="background:#fef3e2;color:#92400e">${r.motif}</span>`:""}
+      </div>
+      ${r.commentaire?`<div class="record-comment">💬 ${r.commentaire}</div>`:""}
+    </div>`).join("");
+}
+
+// ── PROFILS ÉLÈVES ────────────────────────────────────
+function renderProfilsEleves() {
+  const container=document.getElementById("eleveProfilList");
+  if(!enfants.length){container.innerHTML='<div class="card empty-msg">Aucun élève enregistré</div>';return;}
+  container.innerHTML=enfants.map((e,i)=>{
+    const seances=records.filter(r=>r.eleve===eleveLabel(e));
+    const presences=seances.filter(r=>r.elevePresent).length;
+    const absences=seances.filter(r=>!r.elevePresent).length;
+    const anim=animateurs.find(a=>(a.lieux||[]).includes(e.lieu));
+    return`<div class="eleve-card">
+      <div class="eleve-card-header">
+        <div class="eleve-avatar">🧒</div>
+        <div>
+          <div class="eleve-card-name">${eleveLabel(e)}</div>
+          ${e.niveau?`<span class="eleve-card-niveau">🎓 ${e.niveau}</span>`:""}
+        </div>
+      </div>
+      <div class="eleve-info-grid">
+        <div class="eleve-info-item">
+          <div class="eleve-info-label">Lieu habituel</div>
+          <div class="eleve-info-value">📍 ${e.lieu||"—"}</div>
+        </div>
+        <div class="eleve-info-item">
+          <div class="eleve-info-label">Animateur</div>
+          <div class="eleve-info-value">🎨 ${anim?animateurLabel(anim):"—"}</div>
+        </div>
+        <div class="eleve-info-item">
+          <div class="eleve-info-label">Présences</div>
+          <div class="eleve-info-value" style="color:#16a34a">✅ ${presences}</div>
+        </div>
+        <div class="eleve-info-item">
+          <div class="eleve-info-label">Absences</div>
+          <div class="eleve-info-value" style="color:#dc2626">❌ ${absences}</div>
+        </div>
+      </div>
+      <div class="creneau-tags">
+        ${e.creneaux.map(c=>`<span class="creneau-tag">${c.jour} ${c.debut}–${c.fin}</span>`).join("")}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── EXPORT ────────────────────────────────────────────
+function getTrimestre(date) {
+  const m=date.getMonth();
+  if(m<=2)return{nom:"T1",debut:new Date(date.getFullYear(),0,1),fin:new Date(date.getFullYear(),2,31)};
+  if(m<=5)return{nom:"T2",debut:new Date(date.getFullYear(),3,1),fin:new Date(date.getFullYear(),5,30)};
+  if(m<=8)return{nom:"T3",debut:new Date(date.getFullYear(),6,1),fin:new Date(date.getFullYear(),8,30)};
+  return{nom:"T4",debut:new Date(date.getFullYear(),9,1),fin:new Date(date.getFullYear(),11,31)};
+}
+function parseFR(s){const[d,m,y]=s.split("/");return new Date(+y,+m-1,+d);}
+
+function getRecordsPeriode(periode,du,au) {
+  const now=new Date();let debut,fin;
+  if(periode==="trimestre"){const t=getTrimestre(now);debut=t.debut;fin=t.fin;}
+  else if(periode==="semaine"){const day=now.getDay()||7;debut=new Date(now);debut.setDate(now.getDate()-day+1);debut.setHours(0,0,0,0);fin=new Date(debut);fin.setDate(debut.getDate()+6);fin.setHours(23,59,59,999);}
+  else if(periode==="mois"){debut=new Date(now.getFullYear(),now.getMonth(),1);fin=new Date(now.getFullYear(),now.getMonth()+1,0);}
+  else if(periode==="annee"){debut=new Date(now.getFullYear(),0,1);fin=new Date(now.getFullYear(),11,31);}
+  else if(periode==="custom"){debut=du?new Date(du):null;fin=au?new Date(au):null;fin&&fin.setHours(23,59,59,999);}
+  else return records;
+  return records.filter(r=>{const d=parseFR(r.date);return(!debut||d>=debut)&&(!fin||d<=fin);});
+}
+function getPeriodeLabel(p) {
+  const now=new Date();
+  if(p==="trimestre")return getTrimestre(now).nom+" ("+now.getFullYear()+")";
+  if(p==="semaine")return"Semaine en cours";
+  if(p==="mois")return MOIS_IDX[now.getMonth()]+" "+now.getFullYear();
+  if(p==="annee")return"Année "+now.getFullYear();
+  if(p==="custom")return"Période personnalisée";
+  return"Toutes les données";
+}
+
+function openExportModal() {
+  document.getElementById("exportPeriode").value="trimestre";
+  document.getElementById("customPeriode").classList.add("hidden");
+  setFmt("xls");
+  updateExportInfo("trimestre");
+  document.getElementById("driveStatus").style.display="none";
+  document.getElementById("modalExport").classList.remove("hidden");
+}
+
+function updateExportInfo(val) {
+  document.getElementById("customPeriode").classList.toggle("hidden",val!=="custom");
+  const du=document.getElementById("exportDu")?.value,au=document.getElementById("exportAu")?.value;
+  const filtered=getRecordsPeriode(val,du,au);
+  document.getElementById("exportInfo").innerHTML=`📊 <strong>${filtered.length} séance(s)</strong> · <span style="color:#b45309">${getPeriodeLabel(val)}</span>`;
+}
+
+function buildXLSX(filtered) {
+  // Onglet Présences
+  const presHeader=["Date","Animateur","Élève","Niveau","Jour","Heure début","Heure fin","Lieu","Mois","S. du mois","S. de l'année","Élève présent","Motif","Commentaire"];
+  const presRows=filtered.map(r=>[r.date,r.animateur,r.eleve,r.niveau||"",r.jour,r.debut,r.fin,r.lieu,r.mois||"",r.semaineMois||"",r.semaineAnnee||"",r.elevePresent?"Oui":"Non",r.motif||"",r.commentaire||""]);
+  const wsPresences=XLSX.utils.aoa_to_sheet([presHeader,...presRows]);
+  wsPresences["!cols"]=[10,18,16,10,10,10,10,12,10,14,14,12,16,20].map(w=>({wch:w}));
+
+  // Onglet Profils Élèves
+  const eleveHeader=["Prénom","Nom","Niveau","Lieu habituel","Animateur","Créneaux","Présences totales","Absences totales"];
+  const eleveRows=enfants.map(e=>{
+    const anim=animateurs.find(a=>(a.lieux||[]).includes(e.lieu));
+    const seances=records.filter(r=>r.eleve===eleveLabel(e));
+    return[e.prenom,e.nom||"",e.niveau||"",e.lieu||"",anim?animateurLabel(anim):"",e.creneaux.map(c=>`${c.jour} ${c.debut}-${c.fin}`).join(", "),seances.filter(r=>r.elevePresent).length,seances.filter(r=>!r.elevePresent).length];
+  });
+  const wsEleves=XLSX.utils.aoa_to_sheet([eleveHeader,...eleveRows]);
+  wsEleves["!cols"]=[14,14,12,14,18,30,16,14].map(w=>({wch:w}));
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,"Présences",wsPresences);
+  XLSX.utils.book_append_sheet(wb,"Profils Élèves",wsEleves);
+  return wb;
+}
+
+function buildCSV(filtered) {
+  const h=["Date","Animateur","Élève","Niveau","Jour","Heure début","Heure fin","Lieu","Mois","S. du mois","S. de l'année","Élève présent","Motif","Commentaire"];
+  const rows=filtered.map(r=>[r.date,r.animateur,r.eleve,r.niveau||"",r.jour,r.debut,r.fin,r.lieu,r.mois||"",r.semaineMois||"",r.semaineAnnee||"",r.elevePresent?"Oui":"Non",r.motif||"",r.commentaire||""]);
+  return[h,...rows].map(r=>r.map(v=>`"${v}"`).join(",")).join("\n");
+}
+
+function xlsxIndisponible() {
+  if(typeof XLSX==="undefined"){
+    alert("⚠️ La bibliothèque Excel n'a pas pu se charger (connexion internet ou bloqueur de contenu). Le fichier va être téléchargé au format CSV à la place — ouvrable normalement dans Excel.");
+    return true;
+  }
+  return false;
+}
+
+function exportFichier() {
+  const p=document.getElementById("exportPeriode").value;
+  const du=document.getElementById("exportDu")?.value,au=document.getElementById("exportAu")?.value;
+  const filtered=getRecordsPeriode(p,du,au);
+  if(!filtered.length){alert("Aucune séance sur cette période.");return;}
+  const label=getPeriodeLabel(p).replace(/[^a-zA-Z0-9]/g,"-");
+  if(exportFmt==="xls" && !xlsxIndisponible()) {
+    try {
+      const wb=buildXLSX(filtered);
+      XLSX.writeFile(wb,`presences_${label}.xlsx`);
+    } catch(err) {
+      console.error("Erreur export Excel :", err);
+      alert("⚠️ L'export Excel a échoué (détail dans la console). Téléchargement au format CSV à la place.");
+      const csv=buildCSV(filtered);
+      try{
+        const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+        const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`presences_${label}.csv`;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      }catch(e){showCsvBox(csv);}
+    }
+  } else if(exportFmt==="xls") {
+    const csv=buildCSV(filtered);
+    try{
+      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`presences_${label}.csv`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    }catch(e){showCsvBox(csv);}
+  } else {
+    const csv=buildCSV(filtered);
+    try{
+      const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
+      const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`presences_${label}.csv`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    }catch(e){showCsvBox(csv);}
+  }
+  closeModal("modalExport");
+}
+
+async function partagerFichier() {
+  const p=document.getElementById("exportPeriode").value;
+  const du=document.getElementById("exportDu")?.value,au=document.getElementById("exportAu")?.value;
+  const filtered=getRecordsPeriode(p,du,au);
+  if(!filtered.length){alert("Aucune séance sur cette période.");return;}
+  const label=getPeriodeLabel(p).replace(/[^a-zA-Z0-9]/g,"-");
+  let blob,fileName;
+  if(exportFmt==="xls" && !xlsxIndisponible()){
+    try {
+      const wb=buildXLSX(filtered);
+      const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      fileName=`presences_${label}.xlsx`;
+    } catch(err) {
+      console.error("Erreur partage Excel :", err);
+      alert("⚠️ La génération du fichier Excel a échoué. Partage au format CSV à la place.");
+      blob=new Blob(["\uFEFF"+buildCSV(filtered)],{type:"text/csv;charset=utf-8;"});
+      fileName=`presences_${label}.csv`;
+    }
+  } else if(exportFmt==="xls") {
+    blob=new Blob(["\uFEFF"+buildCSV(filtered)],{type:"text/csv;charset=utf-8;"});
+    fileName=`presences_${label}.csv`;
+  } else {
+    blob=new Blob(["\uFEFF"+buildCSV(filtered)],{type:"text/csv;charset=utf-8;"});
+    fileName=`presences_${label}.csv`;
+  }
+  if(navigator.share&&navigator.canShare){
+    try{const file=new File([blob],fileName,{type:blob.type});if(navigator.canShare({files:[file]})){await navigator.share({title:"Présences",files:[file]});closeModal("modalExport");return;}}catch(e){if(e.name!=="AbortError")console.warn(e);}
+  }
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=fileName;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+  closeModal("modalExport");
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function setDriveStatus(msg, ok) {
+  const el = document.getElementById("driveStatus");
+  el.textContent = msg;
+  el.style.display = "block";
+  el.style.background = ok ? "#e6f9ef" : "#fff1f1";
+  el.style.color = ok ? "#16a34a" : "#dc2626";
+}
+
+async function enregistrerDansDrive() {
+  const p=document.getElementById("exportPeriode").value;
+  const du=document.getElementById("exportDu")?.value,au=document.getElementById("exportAu")?.value;
+  const filtered=getRecordsPeriode(p,du,au);
+  if(!filtered.length){alert("Aucune séance sur cette période.");return;}
+  const label=getPeriodeLabel(p).replace(/[^a-zA-Z0-9]/g,"-");
+  let blob,fileName;
+  if(exportFmt==="xls" && !xlsxIndisponible()){
+    try {
+      const wb=buildXLSX(filtered);
+      const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      fileName=`presences_${label}.xlsx`;
+    } catch(err) {
+      console.error("Erreur génération Excel :", err);
+      blob=new Blob(["\uFEFF"+buildCSV(filtered)],{type:"text/csv;charset=utf-8;"});
+      fileName=`presences_${label}.csv`;
+    }
+  } else {
+    blob=new Blob(["\uFEFF"+buildCSV(filtered)],{type:"text/csv;charset=utf-8;"});
+    fileName=`presences_${label}.csv`;
+  }
+
+  const btn=document.getElementById("driveBtn");
+  btn.disabled=true;
+  const originalLabel=btn.textContent;
+  btn.textContent="⏳ Enregistrement...";
+  setDriveStatus("Envoi vers Google Drive en cours...", true);
+
+  try {
+    const base64Content=await blobToBase64(blob);
+    const res=await fetch("/.netlify/functions/uploadToDrive",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({fileName, mimeType: blob.type, base64Content}),
+    });
+    if(!res.ok) throw new Error(await res.text());
+    const result=await res.json();
+    setDriveStatus("✅ Fichier enregistré dans Google Drive !", true);
+    console.log("Fichier Drive :", result.url);
+  } catch(err) {
+    console.error("Erreur enregistrement Google Drive :", err);
+    setDriveStatus("⚠️ Échec de l'enregistrement dans Google Drive (voir console).", false);
+  } finally {
+    btn.disabled=false;
+    btn.textContent=originalLabel;
+  }
+}
+
+function showCsvBox(csv){const ta=document.getElementById("csvFallback");ta.value=csv;ta.classList.remove("hidden");ta.focus();ta.select();}
+function confirmerReinit(){if(!records.length){alert("L'historique est déjà vide.");return;}document.getElementById("modalReinit").classList.remove("hidden");}
+function exportEtReinit(){exportFichier();setTimeout(reinitConfirme,800);}
+function reinitSansExport(){if(!confirm("Confirmer la suppression définitive ?"))return;reinitConfirme();}
+function reinitConfirme(){records=[];save();closeModal("modalReinit");renderHistory();alert("✅ Historique réinitialisé.");}
+
+// ── GESTION ───────────────────────────────────────────
+function switchGTab(name,btn) {
+  document.querySelectorAll(".gtab").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".gestion-panel").forEach(p=>p.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("panel-"+name).classList.add("active");
+}
+
+function renderGestion() {
+  document.getElementById("animateurList").innerHTML=animateurs.length
+    ?animateurs.map((a,i)=>{const elAuto=elevesAssocies(a);const statutBadge=a.statut?`<span class="badge" style="background:${a.statut==='Titulaire'?'#e6f9ef':'#e0f2fe'};color:${a.statut==='Titulaire'?'#16a34a':'#0369a1'};margin-left:6px">${a.statut==='Titulaire'?'⭐':'🔄'} ${a.statut}</span>`:"";return`<div class="item-row"><div class="item-row-top"><div><div class="item-name">👤 ${animateurLabel(a)}${statutBadge}</div><div class="item-sub">${[a.lieux&&a.lieux.length?"📍 "+a.lieux.join(", "):"",a.telephone?"📞 "+a.telephone:"",a.email?"✉️ "+a.email:"",elAuto.length?"🧒 "+elAuto.join(", "):""].filter(Boolean).join(" · ")}</div></div><div class="item-actions"><button class="edit-btn" onclick="openAnimateurModal(${i})">✏️</button><button class="del-btn" onclick="deleteAnimateur(${i})">🗑️</button></div></div></div>`;}).join("")
+    :`<div class="empty-msg">Aucun animateur</div>`;
+
+  document.getElementById("eleveList").innerHTML=enfants.length
+    ?enfants.map((e,i)=>{
+      const icone=e.sexe==="F"?"👧":e.sexe==="M"?"👦":"🧒";
+      const cotisationBadge=e.adherent==="Oui"?`<span class="badge" style="background:${e.cotisationPayee==='Oui'?'#e6f9ef':'#fff1f1'};color:${e.cotisationPayee==='Oui'?'#16a34a':'#dc2626'};margin-left:6px">${e.cotisationPayee==='Oui'?'✅ Cotisation payée':'⚠️ Cotisation non payée'}</span>`:"";
+      return `<div class="item-row"><div class="item-row-top"><div><div class="item-name">${icone} ${eleveLabel(e)}${cotisationBadge}</div><div class="item-sub">${[e.niveau?"🎓 "+e.niveau:"",e.lieu,e.creneaux.map(c=>`${c.jour} ${c.debut}-${c.fin}`).join(", "),e.telephone?"📞 "+e.telephone:"",e.email?"✉️ "+e.email:""].filter(Boolean).join(" · ")}</div></div><div class="item-actions"><button class="edit-btn" onclick="openEleveModal(${i})">✏️</button><button class="del-btn" onclick="deleteEleve(${i})">🗑️</button></div></div></div>`;
+    }).join("")
+    :`<div class="empty-msg">Aucun élève</div>`;
+
+  document.getElementById("lieuxList").innerHTML=lieux.length
+    ?lieux.map((l,i)=>`<div class="item-row"><div class="item-row-top"><div><div class="item-name">📍 ${l.nom}</div><div class="item-sub">${[l.adresse,l.creneaux.length?l.creneaux.map(c=>`${c.jour} ${c.debut}-${c.fin}`).join(", "):"Aucun créneau"].filter(Boolean).join(" · ")}</div></div><div class="item-actions"><button class="edit-btn" onclick="openLieuModal(${i})">✏️</button><button class="del-btn" onclick="deleteLieu(${i})">🗑️</button></div></div></div>`).join("")
+    :`<div class="empty-msg">Aucun lieu</div>`;
+
+  renderNiveaux();
+}
+
+// ── NIVEAUX ───────────────────────────────────────────
+function addNiveau() {
+  const v=document.getElementById("newNiveau").value.trim();
+  if(!v) return;
+  if(!niveaux.includes(v)){niveaux.push(v);save();renderNiveaux();}
+  document.getElementById("newNiveau").value="";
+}
+
+function renderNiveaux() {
+  document.getElementById("niveauList").innerHTML=niveaux.length
+    ?niveaux.map((n,i)=>`<div class="item-row"><div class="item-row-top"><div class="item-name">🎓 ${n}</div><button class="del-btn" onclick="deleteNiveau(${i})">🗑️</button></div></div>`).join("")
+    :`<div class="empty-msg">Aucun niveau</div>`;
+}
+
+function deleteNiveau(i) {
+  if(confirm(`Supprimer le niveau "${niveaux[i]}" ?`)){niveaux.splice(i,1);save();renderNiveaux();}
+}
+
+// ── TAGS GÉNÉRIQUES ───────────────────────────────────
+window._tagData={};
+function renderTagList(listId,key,icon,color){
+  const el=document.getElementById(listId);if(!el)return;
+  const arr=window._tagData[key]||[];
+  el.innerHTML=arr.length?arr.map((n,i)=>`<div class="tag-item"><span class="tag-item-label" style="color:${color}">${icon} ${n}</span><button class="tag-del" onclick="removeTag('${listId}','${key}','${icon}','${color}',${i})">Supprimer</button></div>`).join(""):`<div class="tag-empty">Aucun élément associé</div>`;
+}
+function addTag(listId,selectId,key,icon,color){
+  const sel=document.getElementById(selectId);const val=sel.value;if(!val)return;
+  if(!window._tagData[key])window._tagData[key]=[];
+  if(!window._tagData[key].includes(val)){window._tagData[key].push(val);renderTagList(listId,key,icon,color);}
+  sel.value="";
+}
+function removeTag(listId,key,icon,color,i){window._tagData[key].splice(i,1);renderTagList(listId,key,icon,color);if(key==="_aLieuxSel")refreshElevesAuto();}
+
+// Affiche, en lecture seule, les élèves automatiquement associés selon les
+// lieux actuellement sélectionnés dans le formulaire Animateur.
+function refreshElevesAuto(){
+  const lieuxSel=window._tagData["_aLieuxSel"]||[];
+  const els=enfantsAssocies({lieux:lieuxSel});
+  document.getElementById("aEleveAutoList").innerHTML=els.length
+    ?els.map(e=>{
+      const cr=e.creneaux.map(c=>`${c.jour} ${c.debut}-${c.fin}`).join(", ")||"Aucun créneau";
+      return `<div class="tag-item" style="align-items:flex-start"><span class="tag-item-label" style="color:#7c2d12">🧒 ${eleveLabel(e)}<br><span style="font-weight:400;font-size:11px;color:#b45309">📍 ${e.lieu||"—"} · 🕐 ${cr}</span></span></div>`;
+    }).join("")
+    :`<div class="tag-empty">Aucun élève sur ces lieux</div>`;
+}
+
+// ── MODAL ANIMATEUR ───────────────────────────────────
+let _statutAnimSelected="";
+function setStatutAnimateur(val){
+  _statutAnimSelected=val;
+  document.getElementById("aStatutTitulaire").className="toggle-btn"+(val==="Titulaire"?" yes":"");
+  document.getElementById("aStatutRemplacant").className="toggle-btn"+(val==="Remplaçant"?" yes":"");
+  const estRemplacant=val==="Remplaçant";
+  document.getElementById("aEleveAutoWrap").classList.toggle("hidden",estRemplacant);
+  document.getElementById("aEleveManualWrap").classList.toggle("hidden",!estRemplacant);
+  if(estRemplacant){
+    document.getElementById("aEleveAdd").innerHTML='<option value="">＋ Associer un élève</option>'+enfants.map(e=>eleveLabel(e)).map(n=>`<option value="${n}">${n}</option>`).join("");
+    renderTagList("aEleveList","_aElevesSel","🧒","#7c2d12");
+  } else {
+    refreshElevesAuto();
+  }
+}
+function openAnimateurModal(idx) {
+  const isNew=idx===null;
+  document.getElementById("modalAnimateurTitle").textContent=isNew?"➕ Nouvel animateur":"✏️ Modifier l'animateur";
+  document.getElementById("aEditKey").value=isNew?"":idx;
+  const a=isNew?{prenom:"",nom:"",telephone:"",email:"",statut:"",lieux:[],eleves:[]}:animateurs[idx];
+  document.getElementById("aPrenom").value=a.prenom||"";
+  document.getElementById("aNom").value=a.nom||"";
+  document.getElementById("aTelephone").value=a.telephone||"";
+  document.getElementById("aEmail").value=a.email||"";
+  window._tagData["_aLieuxSel"]=[...(a.lieux||[])];
+  window._tagData["_aElevesSel"]=[...(a.eleves||[])];
+  renderTagList("aLieuList","_aLieuxSel","📍","#7c3aed");
+  document.getElementById("aLieuAdd").innerHTML='<option value="">＋ Associer un lieu</option>'+lieuxNames().map(n=>`<option value="${n}">${n}</option>`).join("");
+  setStatutAnimateur(a.statut||"");
+  document.getElementById("modalAnimateur").classList.remove("hidden");
+}
+function saveAnimateur() {
+  const prenom=document.getElementById("aPrenom").value.trim();if(!prenom){alert("Entrez au moins un prénom.");return;}
+  const obj={prenom,nom:document.getElementById("aNom").value.trim(),telephone:document.getElementById("aTelephone").value.trim(),email:document.getElementById("aEmail").value.trim(),statut:_statutAnimSelected,lieux:[...(window._tagData["_aLieuxSel"]||[])],eleves:[...(window._tagData["_aElevesSel"]||[])]};
+  const idx=document.getElementById("aEditKey").value;
+  if(idx==="")animateurs.push(obj);else animateurs[parseInt(idx)]=obj;
+  save();closeModal("modalAnimateur");renderGestion();populateSelects();
+}
+function deleteAnimateur(i){if(confirm(`Supprimer "${animateurLabel(animateurs[i])}" ?`)){animateurs.splice(i,1);save();renderGestion();populateSelects();}}
+
+// ── MODAL ÉLÈVE ───────────────────────────────────────
+let _sexeEleveSelected="", _adherentSelected="", _cotisationSelected="";
+function setSexeEleve(val){
+  _sexeEleveSelected=val;
+  document.getElementById("eSexeF").className="toggle-btn"+(val==="F"?" yes":"");
+  document.getElementById("eSexeM").className="toggle-btn"+(val==="M"?" yes":"");
+}
+function setAdherent(val){
+  _adherentSelected=val;
+  document.getElementById("eAdherentOui").className="toggle-btn"+(val==="Oui"?" yes":"");
+  document.getElementById("eAdherentNon").className="toggle-btn"+(val==="Non"?" no":"");
+  document.getElementById("eCotisationField").classList.toggle("hidden",val!=="Non");
+  if(val!=="Non") setCotisation("");
+}
+function setCotisation(val){
+  _cotisationSelected=val;
+  document.getElementById("eCotisationOui").className="toggle-btn"+(val==="Oui"?" yes":"");
+  document.getElementById("eCotisationNon").className="toggle-btn"+(val==="Non"?" no":"");
+}
+function openEleveModal(idx) {
+  const isNew=idx===null;
+  document.getElementById("modalEleveTitle").textContent=isNew?"➕ Nouvel élève":"✏️ Modifier l'élève";
+  document.getElementById("eEditKey").value=isNew?"":idx;
+  const e=isNew?{prenom:"",nom:"",sexe:"",nomPere:"",nomMere:"",telephone:"",email:"",lieu:"",niveau:"",adherent:"",cotisationPayee:"",creneaux:[]}:enfants[idx];
+  document.getElementById("ePrenom").value=e.prenom||"";
+  document.getElementById("eNom").value=e.nom||"";
+  document.getElementById("eNomPere").value=e.nomPere||"";
+  document.getElementById("eNomMere").value=e.nomMere||"";
+  document.getElementById("eTelephone").value=e.telephone||"";
+  document.getElementById("eEmail").value=e.email||"";
+  setSexeEleve(e.sexe||"");
+  document.getElementById("eNiveau").innerHTML='<option value="">-- Niveau --</option>'+niveaux.map(n=>`<option ${n===e.niveau?"selected":""}>${n}</option>`).join("");
+  document.getElementById("eLieu").innerHTML='<option value="">-- Lieu --</option>'+lieuxNames().map(n=>`<option ${n===e.lieu?"selected":""}>${n}</option>`).join("");
+  setAdherent(e.adherent||"");
+  setCotisation(e.cotisationPayee||"");
+  const cl=document.getElementById("creneauEditList");cl.innerHTML="";
+  (e.creneaux.length?e.creneaux:[{}]).forEach(c=>addCreneauEditLine(c));
+  document.getElementById("modalEleve").classList.remove("hidden");
+}
+function addCreneauEditLine(c={}) {
+  const div=document.createElement("div");div.className="creneau-line";
+  div.innerHTML=`<select title="Jour">${JOURS.map(j=>`<option ${j===(c.jour||"Lundi")?"selected":""}>${j}</option>`).join("")}</select><select title="Lieu">${lieuxNames().map(l=>`<option ${l===(c.lieu||"")?"selected":""}>${l}</option>`).join("")}</select><input type="time" value="${c.debut||"08:00"}" title="Début"/><input type="time" value="${c.fin||"09:00"}" title="Fin"/><input type="number" min="1" max="53" value="${c.semaine||""}" placeholder="S#" title="N° semaine" style="width:52px;padding:8px 6px;font-size:12px"/><button class="creneau-del" onclick="this.parentElement.remove()">Supprimer</button>`;
+  document.getElementById("creneauEditList").appendChild(div);
+}
+function saveEleve() {
+  const prenom=document.getElementById("ePrenom").value.trim();if(!prenom){alert("Entrez au moins un prénom.");return;}
+  const lines=document.getElementById("creneauEditList").querySelectorAll(".creneau-line");
+  const creneaux=Array.from(lines).map(l=>{const sels=l.querySelectorAll("select"),inps=l.querySelectorAll("input");return{jour:sels[0].value,lieu:sels[1].value,debut:inps[0].value,fin:inps[1].value,semaine:inps[2].value};});
+  const obj={prenom,nom:document.getElementById("eNom").value.trim(),sexe:_sexeEleveSelected,nomPere:document.getElementById("eNomPere").value.trim(),nomMere:document.getElementById("eNomMere").value.trim(),telephone:document.getElementById("eTelephone").value.trim(),email:document.getElementById("eEmail").value.trim(),niveau:document.getElementById("eNiveau").value,lieu:document.getElementById("eLieu").value,adherent:_adherentSelected,cotisationPayee:_cotisationSelected,creneaux};
+  const idx=document.getElementById("eEditKey").value;
+  if(idx==="")enfants.push(obj);else enfants[parseInt(idx)]=obj;
+  save();closeModal("modalEleve");renderGestion();populateSelects();
+}
+function deleteEleve(i){if(confirm(`Supprimer "${eleveLabel(enfants[i])}" ?`)){enfants.splice(i,1);save();renderGestion();populateSelects();}}
+
+// ── MODAL LIEU ────────────────────────────────────────
+function openLieuModal(idx) {
+  const isNew=idx===null;
+  document.getElementById("modalLieuTitle").textContent=isNew?"➕ Nouveau lieu":"✏️ Modifier le lieu";
+  document.getElementById("lEditKey").value=isNew?"":idx;
+  const l=isNew?{nom:"",adresse:"",creneaux:[]}:lieux[idx];
+  document.getElementById("lNom").value=l.nom||"";
+  document.getElementById("lAdresse").value=l.adresse||"";
+  const cl=document.getElementById("lieuCreneauList");cl.innerHTML="";
+  l.creneaux.forEach(c=>addLieuCreneauLine(c));
+  document.getElementById("modalLieu").classList.remove("hidden");
+}
+function addLieuCreneauLine(c={}) {
+  const div=document.createElement("div");div.className="creneau-line";
+  div.innerHTML=`<select title="Jour" style="grid-column:span 2">${JOURS.map(j=>`<option ${j===(c.jour||"Lundi")?"selected":""}>${j}</option>`).join("")}</select><input type="time" value="${c.debut||"08:00"}" title="Début"/><input type="time" value="${c.fin||"09:00"}" title="Fin"/><button class="creneau-del" onclick="this.parentElement.remove()">Supprimer</button>`;
+  document.getElementById("lieuCreneauList").appendChild(div);
+}
+function saveLieu() {
+  const nom=document.getElementById("lNom").value.trim();if(!nom){alert("Entrez le nom du lieu.");return;}
+  const lines=document.getElementById("lieuCreneauList").querySelectorAll(".creneau-line");
+  const creneaux=Array.from(lines).map(l=>{const sels=l.querySelectorAll("select"),inps=l.querySelectorAll("input[type='time']");return{jour:sels[0].value,debut:inps[0].value,fin:inps[1].value};});
+  const obj={nom,adresse:document.getElementById("lAdresse").value.trim(),creneaux};
+  const idx=document.getElementById("lEditKey").value;
+  if(idx==="")lieux.push(obj);else lieux[parseInt(idx)]=obj;
+  save();closeModal("modalLieu");renderGestion();
+}
+function deleteLieu(i){if(confirm(`Supprimer "${lieux[i].nom}" ?`)){lieux.splice(i,1);save();renderGestion();}}
+
+function closeModal(id){document.getElementById(id).classList.add("hidden");}
+document.querySelectorAll(".modal-overlay").forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.add("hidden");}));
+
+// ── INIT ──────────────────────────────────────────────
+populateSelects();
+renderHistory();
+
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;document.getElementById("installBanner").classList.remove("hidden");});
+document.getElementById("installBtn").addEventListener("click",async()=>{if(deferredPrompt){deferredPrompt.prompt();const{outcome}=await deferredPrompt.userChoice;if(outcome==="accepted")document.getElementById("installBanner").classList.add("hidden");deferredPrompt=null;}});
+window.addEventListener("appinstalled",()=>document.getElementById("installBanner").classList.add("hidden"));
+</script>
+</body>
+</html>
